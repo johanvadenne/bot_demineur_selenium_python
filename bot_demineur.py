@@ -7,29 +7,12 @@ import pprint
 import time
 
 def main():
-    try:
-        bot = Bot()
-        
-        for i in range(10):
-            analyse = True
-            while analyse:
-                bot.init_board()
-                grid_probat = bot.calcul_probat()
-                analyse = bot.pose_drapeau(grid_probat)
-
-            bot.init_board()
-            grid_probat = bot.calcul_probat()
-            bot.decouvre_case(grid_probat)
-
-
-        keyboard.wait("enter")
-    except:
-        keyboard.wait("enter")
+    bot = Bot()
         
 
 
 
-dict = {
+dict_img_demineur = {
     'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQAgMAAABinRfyAAAACVBMVEW9vb3///97e3uVBMaVAAAAHklEQVQI12MIDQ0NARFBDAEMDFzkEl6rVq1i0AISAIlSC03msuDYAAAAAElFTkSuQmCC': '?',
     'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQAQMAAAAlPW0iAAAABlBMVEW9vb17e3tXxGy+AAAAEElEQVQI12P4/5+hgYF4BAAJYgl/JfpRmAAAAABJRU5ErkJggg==' : 0,
     'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQAgMAAABinRfyAAAACVBMVEW9vb0AAP97e3u7pKrVAAAAJUlEQVQI12NYBQQMDQxAACUCgAQjiGAFEaIQLiYhGgojEHqBGAB4Gw2cMF3q+AAAAABJRU5ErkJggg==' : 1,
@@ -48,7 +31,6 @@ class Bot:
     def __init__(self):
         self.url = "https://xn--dmineur-bya.eu/"
 
-
         # liste des cases du démineur
         self.tab_cell_demineur_html = []
 
@@ -56,15 +38,14 @@ class Bot:
         self.width = 0
         self.height = 0
 
-
         # initialisation du navigateur
         self.driver = webdriver.Chrome()
         self.action = ActionChains(self.driver)
 
-
-
-
+        # envoie vers la page de démineur
         self.get_page_content()
+        
+        # retour la popup de demande de cookie
         self.driver.find_element(By.CLASS_NAME, "css-k8o10q").click()
 
         # attendre que la touche "entrée" soit pressée
