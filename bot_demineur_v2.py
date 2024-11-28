@@ -17,7 +17,8 @@ def main():
 
 
         keyboard.wait("enter")
-    except:
+    except Exception as e:
+        print(e)
         keyboard.wait("enter")
         
 
@@ -70,7 +71,7 @@ class Bot:
         cellules_html = self.demineur_board_html.find_elements(By.TAG_NAME, "img")
         
         self.calcul_size_board(self.demineur_board_html, cellules_html[0])
-        self.init_cellule(cellules_html)
+        self.init_cellule()
         self.random_click_start()
         
         
@@ -122,10 +123,12 @@ class Bot:
                 
                 for cellule_neighbour in cellules_neighbours:
                     if cellule_neighbour.valeur == '?':
-                        if nbr_inconnu > 0:
-                            self.tab_probat.append(100/(nbr_inconnu-cellule.valeur))
+                        if nbr_inconnu > 0 and nbr_inconnu-cellule.valeur > 0:
+                            cellule_neighbour.tab_probat.append(100/(nbr_inconnu-cellule.valeur))
+                        elif nbr_inconnu-cellule.valeur == 0:
+                            cellule_neighbour.tab_probat.append(100)
                         else:
-                            self.tab_probat.append(0)
+                            cellule_neighbour.tab_probat.append(0)
     
     
     def affiche_proba(self):
