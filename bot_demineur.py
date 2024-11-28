@@ -1,15 +1,31 @@
 import selenium
 from selenium import webdriver
 from selenium.webdriver.common.by import By
+from selenium.webdriver import ActionChains
 import keyboard
 import pprint
 import time
 
 def main():
-    bot = Bot()
-    bot.show_grid()
+    try:
+        bot = Bot()
+        
+        for i in range(10):
+            analyse = True
+            while analyse:
+                bot.init_board()
+                grid_probat = bot.calcul_probat()
+                analyse = bot.pose_drapeau(grid_probat)
 
-    keyboard.wait("enter")
+            bot.init_board()
+            grid_probat = bot.calcul_probat()
+            bot.decouvre_case(grid_probat)
+
+
+        keyboard.wait("enter")
+    except:
+        keyboard.wait("enter")
+        
 
 
 
@@ -43,49 +59,37 @@ class Bot:
 
         # initialisation du navigateur
         self.driver = webdriver.Chrome()
+        self.action = ActionChains(self.driver)
 
 
 
 
         self.get_page_content()
+        self.driver.find_element(By.CLASS_NAME, "css-k8o10q").click()
 
         # attendre que la touche "entrée" soit pressée
-        # keyboard.wait("enter")
+        keyboard.wait("enter")
 
 
         self.init_tableau_demineur_html()
 
         # clique sur le bouton "accepter"
-        self.driver.find_element(By.CLASS_NAME, "css-k8o10q").click()
 
         # clique sur le la case (0, 0)
-        self.tab_cell_demineur_html[0].click()
+        self.tab_cell_demineur_html[-1].click()
 
-        # clique droit sur la case (0, 0)
-
-
-
-
-        start_time = time.time()
-        # calcul de la taille du tableau
         self.calcul_size_board()
-        end_time = time.time()
-        print(f"Temps d'exécution calcul_size_board() : {end_time - start_time:.5f} secondes")
-
-        start_time = time.time()
+        
         # initialisation de la grille
         self.make_grid(self.width, self.height)
-        end_time = time.time()
-        print(f"Temps d'exécution make_grid() : {end_time - start_time:.5f} secondes")
-
-        start_time = time.time()
-        self.calcul_probat()
-        end_time = time.time()
-        print(f"Temps d'exécution calcul_probat() : {end_time - start_time:.5f} secondes")
 
 
 
-
+    def init_board(self):
+        self.calcul_size_board()
+        # initialisation de la grille
+        self.make_grid(self.width, self.height)
+        
 
     def get_page_content(self):
         self.page_content = self.driver.get(self.url)
@@ -106,20 +110,17 @@ class Bot:
         self.width = int(width_board/width_cell)
         self.height = int(height_board/height_cell)
 
+
     def cases_html_to_char(self, cases_html):
         # Crée un cache pour les valeurs déjà récupérées
         src_cache = {}
         cases = []
         for case in cases_html:
             src = case.get_attribute("src")
-            if src not in src_cache:
-                src_cache[src] = dict[src]  # Cache le résultat
-            cases.append(src_cache[src])
+            cases.append(dict[src])
+        
         return cases
-
-
-
-
+    
 
     def make_grid(self, width, height):
 
@@ -178,12 +179,10 @@ class Bot:
         return False
 
 
-
-
     def calcul_probat(self):
 
         # créer un nouveai u tableau vide avec une valeur de 1 par défaut
-        grid_test = grid_test = [[1 for _ in range(self.width)] for _ in range(self.height)]
+        grid_probat = grid_probat = [[1 for _ in range(self.width)] for _ in range(self.height)]
 
         # parcours les ligne du tableau
         x_cell=-1
@@ -202,52 +201,129 @@ class Bot:
 
                     # on récupère les bloc autour
                     neighbours_cellule = self.get_neighbours(x_cell,y_cell)
+                    nbr_cellule_inconnu=0
+                    nbr_cellule_drapeau=0
                     for neighbour_x_y_cellule_conjoint in neighbours_cellule:
                         x_conjoint, y_conjoint = neighbour_x_y_cellule_conjoint
 
                         # récupère la valeur
                         valeur_conjoint = self.grid[x_conjoint][y_conjoint]
 
-                        nbr_cellule_inconnu=0
-
                         # vérifie si c'est un entier
                         if valeur_conjoint == '?':
                             nbr_cellule_inconnu+=1
+                        if valeur_conjoint == '🚩':
+                            nbr_cellule_drapeau+=1
+                    
+                    for neighbour_x_y_cellule_conjoint in neighbours_cellule:
+                        x_conjoint, y_conjoint = neighbour_x_y_cellule_conjoint
 
-                    if nbr_cellule_inconnu != 0:
-                        grid_test[x_cell][y_cell] *= 100/nbr_cellule_inconnu
-                    else:
-                        grid_test[x_cell][y_cell] = 0
+                        # récupère la valeur
+                        valeur_conjoint = self.grid[x_conjoint][y_conjoint]
 
+                        # vérifie si c'est un entier
+                        if valeur_conjoint == '?':
+                            if valeur_cell-nbr_cellule_drapeau == 1:
+                                grid_probat[x_conjoint][y_conjoint] == 999999999999
+                            if nbr_cellule_inconnu != 0 and valeur_cell-nbr_cellule_drapeau > 0:
+                                grid_probat[x_conjoint][y_conjoint] *= int(100/nbr_cellule_inconnu)
+                            elif valeur_cell-nbr_cellule_drapeau == 0:
+                                grid_probat[x_conjoint][y_conjoint] = -1
+                            else:
+                                grid_probat[x_conjoint][y_conjoint] = 0
+                
+                        if valeur_conjoint == 0 or valeur_conjoint == '🚩':
+                            grid_probat[x_conjoint][y_conjoint] = 0
+        
+        for x in range(len(grid_probat)):
+            for y in range(len(grid_probat[x])):
+                if grid_probat[x][y] == 1:
+                    grid_probat[x][y] = 0
 
-        pprint.pprint(grid_test)
+        
+        print(grid_probat)
+                            
+        return grid_probat
+    
+    def pose_drapeau(self, grid_probat):
+        
+        meilleur_probat = 0
+        click_x = -1
+        click_y = -1
+        tab_meilleur_neighbours = [0]
+        
+        
+        x=-1
+        for line in self.grid:
+            x+=1
+            y=-1
 
+            # parcour les cellule
+            for cell in line:
+                y+=1
 
+                valeur_cell = self.grid[x][y]
 
+                # si la cellule n'est pas trouvé
+                if isinstance(valeur_cell, int):
 
+                    # on récupère les bloc autour
+                    neighbours = self.get_neighbours(x,y)
+                    
+                    meilleur_neighbour = -1
+                    for neighbour_x_y in neighbours:
+                        n_x = neighbour_x_y[0]
+                        n_y = neighbour_x_y[1]
+                        
+                        if grid_probat[n_x][n_y] >= 999999999999:
+                            position_element = n_x*self.width + n_y
+                            self.action.context_click(self.tab_cell_demineur_html[position_element]).perform()
+                            return True
+                            
+                        
+                        if grid_probat[n_x][n_y] == meilleur_neighbour:
+                            meilleur_neighbour = 0
+                            temp_click_x = -1
+                            temp_click_y = -1
+                            break
+                        
+                        if grid_probat[n_x][n_y] > meilleur_neighbour:
+                            meilleur_neighbour = grid_probat[n_x][n_y]
+                            temp_click_x = n_x
+                            temp_click_y = n_y
+                    
+                    if temp_click_x > -1 and temp_click_y > -1 and meilleur_neighbour > max(tab_meilleur_neighbours):
+                        click_x = temp_click_x
+                        click_y = temp_click_y
+                    tab_meilleur_neighbours.append(meilleur_neighbour)
+                    
+        
+        if max(tab_meilleur_neighbours) > 0:
+            position_element = click_x*self.width + click_y
+            self.action.context_click(self.tab_cell_demineur_html[position_element]).perform()
+            return True
+        else:
+            return False
+        
+        
+    def decouvre_case(self, grid_probat):
+        
+        x=-1
+        for line in grid_probat:
+            x+=1
+            y=-1
 
+            # parcour les cellule
+            for cell in line:
+                y+=1
+                
+                if cell < 0:
+                    self.tab_cell_demineur_html[x*self.width+y].click()
+                    
+        
 
 
 
 
 if __name__ == "__main__":
     main()
-
-
-
-
-
-
-
-
-
-
-# ?  ?  ?  ?  ?  ?  ?  ?  ?
-# 0  1  ?  ?  ?  ?  ?  ?  ?
-# 0  1  1  2  ?  ?  ?  ?  ?
-# 0  0  0  1  ?  ?  ?  ?  ?
-# 0  0  0  2  ?  ?  ?  ?  ?
-# 0  0  0  1  ?  ?  ?  ?  ?
-# 0  0  0  2  ?  ?  ?  ?  ?
-# 0  0  0  1  ?  ?  ?  ?  ?
-# 0  0  0  1  ?  ?  ?  ?  ?
