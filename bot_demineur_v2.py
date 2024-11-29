@@ -8,18 +8,28 @@ import time
 import random
 
 def main():
+    
     try:
         bot = Bot()
-        
+
         bot.init_cellule()
         bot.calcul_proba_mine()
-        bot.affiche_proba()
 
+        while True:
+            bot.init_cellule()
+            bot.calcul_proba_mine()
+            bot.drop_flag()
+            bot.init_cellule()
+            bot.calcul_proba_mine()
+            bot.decouvre_cellule()
+            if bot.win():
+                break
 
         keyboard.wait("enter")
     except Exception as e:
-        print(e)
+        print("ERREUR: "+ str(e))
         keyboard.wait("enter")
+        
         
 
 
@@ -112,20 +122,22 @@ class Bot:
     
     def calcul_proba_mine(self):
         for cellule in self.cellules:
-            print(cellule.valeur)
             if isinstance(cellule.valeur, int):
                 cellules_neighbours = self.get_cellules_neighbours(cellule.x, cellule.y)
                 
                 nbr_inconnu = 0
+                nbr_drapeau = 0
                 for cellule_neighbour in cellules_neighbours:
                     if cellule_neighbour.valeur == '?':
                         nbr_inconnu+=1
+                    if cellule_neighbour.valeur == '🚩':
+                        nbr_drapeau+=1
                 
                 for cellule_neighbour in cellules_neighbours:
                     if cellule_neighbour.valeur == '?':
-                        if nbr_inconnu > 0 and nbr_inconnu-cellule.valeur > 0:
-                            cellule_neighbour.tab_probat.append(100/(nbr_inconnu-cellule.valeur))
-                        elif nbr_inconnu-cellule.valeur == 0:
+                        if nbr_inconnu > 0 and nbr_inconnu-(cellule.valeur-nbr_drapeau) > 0:
+                            cellule_neighbour.tab_probat.append((100/nbr_inconnu)*(cellule.valeur-nbr_drapeau))
+                        elif (nbr_inconnu)-(cellule.valeur-nbr_drapeau) == 0:
                             cellule_neighbour.tab_probat.append(100)
                         else:
                             cellule_neighbour.tab_probat.append(0)
@@ -137,27 +149,44 @@ class Bot:
         ligne = []
         for cellule in self.cellules:
             if x != cellule.x:
-                print(ligne)
                 ligne = [cellule.tab_probat]
             else:
                 ligne.append(cellule.tab_probat)
-        print(ligne)
-                
-            
     
-    # def frop_flag(self):
+    def drop_flag(self):
         
-    #     for cellule in self.cellules:
-    #         if cellule.valeur == '?':
+        drappeau_poser = False
+        for cellule in self.cellules:
+            if cellule.valeur == '?':
                 
-    #             if max(cellule.tab_probat) == 100:
-    #                 cellule.drop_flag()
-                
-    #             if 
+                if len(cellule.tab_probat) > 0:
+                    if max(cellule.tab_probat) == 100:
+                        cellule.drop_flag()
+                        drappeau_poser = True
+        
+        if not drappeau_poser:
+            max_probat = 0
+            cellule_probat = None
+            for cellule in self.cellules:
+                if cellule.valeur == '?':
+
+                    if len(cellule.tab_probat) > 0:
+                        if max(cellule.tab_probat) > max_probat:
+                            max_probat = max(cellule.tab_probat)
+                            cellule_probat = cellule
             
-                            
-                
-                    
+            if max_probat > 0:
+                cellule_probat.drop_flag()
+    
+    
+    def decouvre_cellule(self):
+        for cellule in self.cellules:
+            if cellule.valeur == '?':
+              
+                if len(cellule.tab_probat) > 0:
+                    if min(cellule.tab_probat) == 0:
+                        cellule.click()
+          
                 
     def position_cell(self, x, y) -> int:
         return (x*self.width + y)
@@ -171,6 +200,16 @@ class Bot:
                 if (x, y) != (0, 0) and 0 <= i + x < self.height and 0 <= j + y < self.width:
                     cellules_neighbours.append(self.cellules[self.position_cell(i + x, j + y)])
         return cellules_neighbours
+    
+    def win(self):
+        cellule_inconu = False
+        for cellule in self.cellules:
+            if cellule.valeur == '?':
+                cellule_inconu = True
+                break
+        
+        return not cellule_inconu
+        
 
 
 class Cellule:
